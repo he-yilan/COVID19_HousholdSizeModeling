@@ -1,3 +1,5 @@
+#This SEIR model was modified from  the python version of https://cs.uwaterloo.ca/~paforsyt/SEIR.html
+
 import numpy as np
 import parameters as parameters
 from scipy import integrate
@@ -5,35 +7,24 @@ from calculations import seir_function
 import matplotlib.pyplot as plt
 import pandas as pd
 from numpy import savetxt
-#June 1 to July 21
-S_0 =  328239523  # USA starting on Jan 21 excluding initial infected, exposed population,
-#basic outline
 
-I_0 =   1.0  # initial infected from market
+S_0 = 328239522 #USA population excluding initial infected, exposed population,
 
-#according to the file.
-E_0 = 1.0 * I_0  # initial exposed
+I_0 =  1
 
-# 1 case
+E_0 = 1.0 * I_0  # initial exposed.
 
-R_0 = 0  # initial recovered (not to be confused with R_zero, below)
-# initially, no one has recovered
-
-c = 0.0  # no mutation (yet)
-# maybe this happens later?
+R_0 = 0 # none are recovered yet as of Jan 21.
 
 N = S_0 + I_0 + E_0 + R_0  # N = total population
 
-sigma = 1./5.2 #(average duration of incubation is 1/δ)
+sigma = 1/5.2 #(average duration of incubation is 1/δ)
 #transmission rate from exposed -> infected
 #incubation rate
-gamma = 1./10
-#recovery rate
-#avg of 7 and 14
-# https://www.worldometers.info/coronavirus/coronavirus-incubation-period/
+gamma = 1./7
 
-#case fatality rate:
 
+c = 0 #mutations. not yet
 """
  R_zero = number of people infected by each infectious person
           this has nothing to do with "R" = removed above
@@ -55,19 +46,22 @@ gamma = 1./10
              piecewise constant values for R_zero
 """
 r_zero_array = np.zeros([7, 2])
-r_zero_array[0, :] = [0.0, 2.2]  # t=0 days
-r_zero_array[1, :] = [30.0, 2.2]  # t = 30 days R_zero = 7/4/2020 where did i get the data   2/21
-r_zero_array[2, :] = [60, 2.19] # 60 r_zero_array[3, :] = [9.0, 1.13]  #  7/10/2020  # 3/21
-r_zero_array[4, :] = [70.0, 1.43]  #  7/13/2020  #3/31
-r_zero_array[5, :] = [90.0, 1.08]  # 7/16/2020 # 4/10
-r_zero_array[6, :] = [1.0, 1.02]  # t = 7/19/2020
-#r_zero_array[7, :] = [21.0, 1.00 ] #7/21/2020
+r_zero_array[0, :] = [0.0, 2.2]  # t=0 days https://www.scientificamerican.com/article/how-does-the-new-coronavirus-compare-with-the-flu/
+r_zero_array[1, :] = [30, 2.2] # 60 2/20
+#For the following days this source was used: http://metrics.covid19-analysis.org/
+r_zero_array[2, :] = [60.0, 2.19]  #  3/21
+r_zero_array[3, :] = [70.0, 1.43]  #  3/31
+r_zero_array[4, :] = [90.0, 1.04]  # 4/20
+r_zero_array[5, :] = [120, 0.96]  # t 5/20
+r_zero_array[6, :] = [150.0, 1.21 ] #6/19
+
 
 #it's different for each state
 params = parameters.Params(c, N, sigma, gamma, r_zero_array)
 outputs = []
 t_0 = 0
-tspan = np.linspace(t_0, 163, 162)  # time in days
+tspan = np.linspace(t_0, 184, 183)  # start to end of time in days, array
+# time, size, index
 
 y_init = np.zeros(4)
 y_init[0] = S_0
@@ -82,10 +76,10 @@ def seir_with_params(t, y):
 r = integrate.ode(seir_with_params).set_integrator("dopri5")
 r.set_initial_value(y_init, t_0)
 y = np.zeros((len(tspan), len(y_init)))
+
 y[0, :] = y_init  # array for solution
-for i in range(1, 163):
+for i in range(1, 183):
     y[i, :] = r.integrate(tspan[i])
-    #outputs.insert[i, r.integrate(tspan[i])]
     if not r.successful():
         raise RuntimeError("Could not integrate")
 # generate model
@@ -104,11 +98,6 @@ axes[2].legend()
 axes[3].legend()
 
 plt.savefig('plot.png')
-#plt.show()
-
-#fig, axes = plt.subplots(ncols=2)
-
-#plt.savefig('output/infectious.png')
 plt.show()
 
 total_cases = y[:, 1] + y[:, 2] + y[:, 3]
@@ -129,7 +118,8 @@ I_end = y[nsteps - 1, 2]
 R_end = y[nsteps - 1, 3]
 
 total = S_end + E_end + I_end + R_end
-
+#3292913.4716165434
+#3224194.074574421
 print('time (days): % 2d' % tspan[nsteps - 1])
 
 print('total population: % 2d' % total)
@@ -143,9 +133,7 @@ print('Infected (infectious) at t= % 2d : % 2d \n' % (tspan[nsteps - 1], I_end))
 print('Exposed (non-infectious) at t= % 2d : % 2d \n ' % (tspan[nsteps - 1], E_end))
 print('Susceptable at t= % 2d : % 2d \n ' % (tspan[nsteps - 1], S_end))
 
+#saved E,I,R cases in a csv file.
 save= np.savetxt('outputs.csv', total_cases, delimiter = ',')
 file = open('outputs.csv', 'r')
 print(file.read())
-#df = pdf.DataFrame(total_cases).T
-#df.to_excel(excel_writer = "C:/Users/TsaiFamily/Desktop/outputs.xlsx")
-#july 1st to jujly 21
